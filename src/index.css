@@ -1,111 +1,60 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
+@import "@digital-go-jp/tailwind-theme-plugin/v4";
+@import "@digital-go-jp/design-tokens/dist/tokens.css";
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/* サンプル部品が使う画面幅の区切り。v4 用の CSS には含まれていない */
+@theme {
+	--breakpoint-desktop: 48em;
+	--breakpoint-desktop-admin: 62em;
 }
 
+@layer base {
+	body {
+		@apply bg-white font-sans text-std-16N-170 text-solid-gray-900;
+	}
+}
+
+/*
+ * OS の設定がダークのとき、Tailwind の色の変数を暗い配色に差し替える。
+ * サンプル部品のクラス (bg-white など) は変えずに、変数の値だけを入れ替える。
+ * 値はデザイントークン (tokens.css) の変数を参照する。ここに無い色を新しく使うときは足す
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+	:root {
+		color-scheme: dark;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
+		--color-white: var(--color-neutral-solid-gray-900);
+		--color-black: var(--color-neutral-white);
+		--color-solid-gray-50: var(--color-neutral-solid-gray-800);
+		--color-solid-gray-100: var(--color-neutral-solid-gray-700);
+		--color-solid-gray-300: var(--color-neutral-solid-gray-600);
+		--color-solid-gray-420: var(--color-neutral-solid-gray-500);
+		--color-solid-gray-500: var(--color-neutral-solid-gray-420);
+		--color-solid-gray-536: var(--color-neutral-solid-gray-420);
+		--color-solid-gray-600: var(--color-neutral-solid-gray-300);
+		--color-solid-gray-800: var(--color-neutral-solid-gray-100);
+		--color-solid-gray-900: var(--color-neutral-solid-gray-50);
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
+		/* 主色とリンクは明暗を反転する (50 と 1200、100 と 1100 …) */
+		--color-key-50: var(--color-primitive-blue-1200);
+		--color-key-100: var(--color-primitive-blue-1100);
+		--color-key-200: var(--color-primitive-blue-1000);
+		--color-key-300: var(--color-primitive-blue-900);
+		--color-key-900: var(--color-primitive-blue-300);
+		--color-key-1000: var(--color-primitive-blue-200);
+		--color-key-1200: var(--color-primitive-blue-50);
+		--color-blue-900: var(--color-primitive-blue-300);
+		--color-blue-1000: var(--color-primitive-blue-200);
+		--color-magenta-900: var(--color-primitive-magenta-300);
 
-body {
-  margin: 0;
-}
+		/* フォーカスの黄色は暗くし、上に載るリンクの文字との差を保つ */
+		--color-yellow-300: var(--color-primitive-yellow-1200);
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+		--color-red-800: var(--color-primitive-red-400);
+		--color-red-1000: var(--color-primitive-red-200);
+		--color-orange-800: var(--color-primitive-orange-400);
+		--color-error-1: var(--color-primitive-red-400);
+		--color-success-2: var(--color-primitive-green-300);
+		--color-warning-yellow-2: var(--color-primitive-yellow-300);
+	}
 }
