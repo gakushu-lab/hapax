@@ -1,5 +1,5 @@
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
-import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteCommand, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { dynamoClient } from "./clients";
 import { config } from "./config";
 
@@ -88,4 +88,8 @@ export async function consume(id: string, now: number): Promise<ConsumeResult> {
 		if (!item || item.status !== "ready") return { kind: "not_found" };
 		return { kind: "gone" };
 	}
+}
+
+export async function deleteItem(id: string): Promise<void> {
+	await dynamoClient().send(new DeleteCommand({ TableName: config().tableName, Key: { id } }));
 }
