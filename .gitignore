@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 # Lambda 用のバンドル
 dist-api
+# playwright
+playwright-report
+test-results
