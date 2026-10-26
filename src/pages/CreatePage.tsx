@@ -24,6 +24,7 @@ import {
 	encryptMeta,
 	encryptedSize,
 	generateSecret,
+	wrapSecret,
 } from "../lib/crypto";
 import { buildFragment } from "../lib/fragment";
 import { formatBytes } from "../lib/format";
@@ -56,10 +57,12 @@ export function CreatePage() {
 	const fileId = useId();
 	const expiresId = useId();
 	const downloadsId = useId();
+	const passwordId = useId();
 	const [file, setFile] = useState<File | null>(null);
 	const [fileError, setFileError] = useState("");
 	const [expiresIn, setExpiresIn] = useState(EXPIRES_OPTIONS[1].value);
 	const [maxDownloads, setMaxDownloads] = useState(1);
+	const [password, setPassword] = useState("");
 	const [token, setToken] = useState<string | null>(null);
 	const [phase, setPhase] = useState<Phase>({ kind: "input" });
 	const [copied, setCopied] = useState(false);
@@ -106,7 +109,10 @@ export function CreatePage() {
 			await putBlob(uploadUrl, cipher, (ratio) => setPhase({ kind: "uploading", ratio }));
 			await completeUpload(id);
 
-			const url = `${window.location.origin}/d/${id}#${buildFragment(secret)}`;
+			const fragment = password
+				? buildFragment({ kind: "password", wrapped: await wrapSecret(secret, password) })
+				: buildFragment({ kind: "plain", secret });
+			const url = `${window.location.origin}/d/${id}#${fragment}`;
 			setPhase({ kind: "done", url });
 		} catch (err) {
 			setPhase({ kind: "failed", message: errorMessage(err) });
@@ -246,6 +252,25 @@ export function CreatePage() {
 							</option>
 						))}
 					</Select>
+				</div>
+
+				<div className="grid gap-2">
+					<Label htmlFor={passwordId}>
+						パスワード<RequirementBadge isOptional>※任意</RequirementBadge>
+					</Label>
+					<SupportText id={`${passwordId}-support`}>
+						設定すると、URL が漏れてもパスワードを知らない人は開けません。パスワードは URL とは別の手段で伝えてください。
+					</SupportText>
+					<Input
+						id={passwordId}
+						type="password"
+						autoComplete="new-password"
+						aria-describedby={`${passwordId}-support`}
+						value={password}
+						disabled={busy}
+						onChange={(e) => setPassword(e.target.value)}
+						className="w-full"
+					/>
 				</div>
 
 				<Turnstile onToken={onToken} />
