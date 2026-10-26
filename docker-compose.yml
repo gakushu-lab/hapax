@@ -1,0 +1,14 @@
+# ローカル開発とテスト用。本番の DynamoDB と S3 の代わり
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:3.3.1
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  s3:
+    image: adobe/s3mock:5.2.3
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: hapax-files
+    ports:
+      - "127.0.0.1:9090:9090"
