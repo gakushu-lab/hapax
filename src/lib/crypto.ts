@@ -146,3 +146,52 @@ export async function decryptStream(
 	await decryptRecord(buffer, true);
 	return new Blob(parts);
 }
+
+// パスワードで秘密鍵を包む。反復回数は Open Worldwide Application Security Project (OWASP) の推奨値
+const PBKDF2_ITERATIONS = 600_000;
+
+export type WrappedSecret = {
+	salt: Uint8Array<ArrayBuffer>;
+	wrapped: Uint8Array<ArrayBuffer>; // IV 12バイト + 暗号化した秘密鍵
+};
+
+async function passwordKey(password: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
+	const base = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, [
+		"deriveKey",
+	]);
+	return crypto.subtle.deriveKey(
+		{ name: "PBKDF2", hash: "SHA-256", salt, iterations: PBKDF2_ITERATIONS },
+		base,
+		{ name: "AES-GCM", length: 256 },
+		false,
+		["encrypt", "decrypt"],
+	);
+}
+
+export async function wrapSecret(
+	secret: Uint8Array<ArrayBuffer>,
+	password: string,
+): Promise<WrappedSecret> {
+	const salt = crypto.getRandomValues(new Uint8Array(16));
+	const iv = crypto.getRandomValues(new Uint8Array(12));
+	const key = await passwordKey(password, salt);
+	const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, secret));
+	const wrapped = new Uint8Array(iv.length + cipher.length);
+	wrapped.set(iv);
+	wrapped.set(cipher, iv.length);
+	return { salt, wrapped };
+}
+
+// パスワードが違うと例外を投げる
+export async function unwrapSecret(
+	{ salt, wrapped }: WrappedSecret,
+	password: string,
+): Promise<Uint8Array<ArrayBuffer>> {
+	const key = await passwordKey(password, salt);
+	const plain = await crypto.subtle.decrypt(
+		{ name: "AES-GCM", iv: wrapped.slice(0, 12) },
+		key,
+		wrapped.slice(12),
+	);
+	return new Uint8Array(plain);
+}

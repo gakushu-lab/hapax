@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import type { DownloadInfo } from "../../shared/api";
 import { Progress } from "../components/Progress";
 import { Button } from "../components/dads/Button";
+import { ErrorText } from "../components/dads/ErrorText";
+import { Input } from "../components/dads/Input";
+import { Label } from "../components/dads/Label";
 import { Link } from "../components/dads/Link";
 import { NotificationBanner, NotificationBannerBody } from "../components/dads/NotificationBanner";
 import {
@@ -9,7 +12,14 @@ import {
 	ProgressIndicatorSpinner,
 } from "../components/dads/ProgressIndicator";
 import { ApiRequestError, consumeDownload, getDownload } from "../lib/api";
-import { decryptMeta, decryptStream, deriveKeys, type FileMeta, type Keys } from "../lib/crypto";
+import {
+	decryptMeta,
+	decryptStream,
+	deriveKeys,
+	unwrapSecret,
+	type FileMeta,
+	type Keys,
+} from "../lib/crypto";
 import { parseFragment } from "../lib/fragment";
 import { formatBytes, formatDateTime } from "../lib/format";
 
@@ -19,6 +29,7 @@ type Phase =
 	| { kind: "not_found" }
 	| { kind: "gone" }
 	| { kind: "failed"; message: string }
+	| { kind: "password"; info: DownloadInfo; error: string; checking: boolean }
 	| { kind: "ready"; info: DownloadInfo; keys: Keys; meta: FileMeta }
 	| { kind: "downloading"; ratio: number; meta: FileMeta }
 	| { kind: "done"; meta: FileMeta };
@@ -48,31 +59,50 @@ function Unavailable({ title, message }: { title: string; message: string }) {
 	);
 }
 
+async function open(secret: Uint8Array<ArrayBuffer>, info: DownloadInfo): Promise<Phase> {
+	const keys = await deriveKeys(secret);
+	const meta = await decryptMeta(keys.meta, info.meta).catch(() => null);
+	if (!meta) return { kind: "invalid_link" };
+	return { kind: "ready", info, keys, meta };
+}
+
 export function ReceivePage({ id }: { id: string }) {
-	const [secret] = useState(() => parseFragment(window.location.hash));
+	const passwordId = useId();
+	const [fragment] = useState(() => parseFragment(window.location.hash));
 	const [phase, setPhase] = useState<Phase>(
-		secret ? { kind: "loading" } : { kind: "invalid_link" },
+		fragment ? { kind: "loading" } : { kind: "invalid_link" },
 	);
+	const [password, setPassword] = useState("");
 
 	useEffect(() => {
-		if (!secret) return;
+		if (!fragment) return;
 		(async () => {
 			try {
 				const info = await getDownload(id);
-				const keys = await deriveKeys(secret);
-				const meta = await decryptMeta(keys.meta, info.meta).catch(() => null);
-				if (!meta) {
-					setPhase({ kind: "invalid_link" });
-					return;
+				if (fragment.kind === "password") {
+					setPhase({ kind: "password", info, error: "", checking: false });
+				} else {
+					setPhase(await open(fragment.secret, info));
 				}
-				setPhase({ kind: "ready", info, keys, meta });
 			} catch (e) {
 				if (e instanceof ApiRequestError && e.status === 404) setPhase({ kind: "not_found" });
 				else if (e instanceof ApiRequestError && e.status === 410) setPhase({ kind: "gone" });
 				else setPhase({ kind: "failed", message: "時間をおいて画面を再読み込みしてください。" });
 			}
 		})();
-	}, [id, secret]);
+	}, [id, fragment]);
+
+	async function submitPassword(e: FormEvent, info: DownloadInfo) {
+		e.preventDefault();
+		if (fragment?.kind !== "password" || (phase.kind === "password" && phase.checking)) return;
+		setPhase({ kind: "password", info, error: "", checking: true });
+		try {
+			const secret = await unwrapSecret(fragment.wrapped, password);
+			setPhase(await open(secret, info));
+		} catch {
+			setPhase({ kind: "password", info, error: "パスワードが違います。", checking: false });
+		}
+	}
 
 	async function download(info: DownloadInfo, keys: Keys, meta: FileMeta) {
 		setPhase({ kind: "downloading", ratio: 0, meta });
@@ -126,6 +156,35 @@ export function ReceivePage({ id }: { id: string }) {
 			);
 		case "failed":
 			return <Unavailable title="エラーが発生しました" message={phase.message} />;
+		case "password":
+			return (
+				<>
+					<h1 className="mb-6 text-std-28B-150">ファイルを受け取る</h1>
+					<form
+						onSubmit={(e) => submitPassword(e, phase.info)}
+						className="grid gap-6"
+						noValidate
+					>
+						<div className="grid gap-2">
+							<Label htmlFor={passwordId}>パスワード</Label>
+							<Input
+								id={passwordId}
+								type="password"
+								autoComplete="off"
+								aria-describedby={phase.error ? `${passwordId}-error` : undefined}
+								isError={phase.error !== ""}
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								className="w-full"
+							/>
+							{phase.error && <ErrorText id={`${passwordId}-error`}>{phase.error}</ErrorText>}
+						</div>
+						<Button size="lg" variant="solid-fill" type="submit" aria-disabled={phase.checking}>
+							{phase.checking ? "確認しています" : "開く"}
+						</Button>
+					</form>
+				</>
+			);
 	}
 
 	const meta = phase.meta;
