@@ -2,7 +2,7 @@ import { build } from "esbuild";
 
 // API (Lambda Web Function) と削除処理 (Lambda) を1ファイルずつに束ねる。Lambda が推奨する ES モジュール形式で出す
 await build({
-	entryPoints: ["api/lambda.ts"],
+	entryPoints: ["api/lambda.ts", "api/cleanup.ts"],
 	outdir: "dist-api",
 	outExtension: { ".js": ".mjs" },
 	bundle: true,

@@ -11,8 +11,14 @@ import {
 } from "../shared/api";
 import { config, required } from "./config";
 import { consume, getItem, markReady, putPending } from "./db";
-import { objectSize, presignGet, presignPut } from "./storage";
+import { scheduleCleanup } from "./schedule";
+import { DOWNLOAD_URL_TTL, objectSize, presignGet, presignPut } from "./storage";
 import { verifyTurnstile } from "./turnstile";
+
+// アップロードが終わらないまま放置されたものを消すまでの時間
+const PENDING_TTL_MS = 60 * 60 * 1000;
+// 残り回数が0になってから消すまでの時間。署名付き GET URL の有効期限に余裕を足す
+const DELETE_DELAY_MS = DOWNLOAD_URL_TTL * 1000 + 30_000;
 
 export const app = new Hono();
 
@@ -65,6 +71,7 @@ app.post("/api/uploads", async (c) => {
 		maxDownloads: body.maxDownloads,
 		expiresAt: Date.now() + body.expiresIn * 1000,
 	});
+	await scheduleCleanup(id, Date.now() + PENDING_TTL_MS);
 
 	const uploadUrl = await presignPut(id);
 	return c.json<CreateUploadResponse>({ id, uploadUrl }, 201);
@@ -79,6 +86,7 @@ app.post("/api/uploads/:id/complete", async (c) => {
 
 	const item = await markReady(id, size);
 	if (!item) return c.json(error("size_mismatch"), 409);
+	await scheduleCleanup(id, item.expiresAt);
 	return c.body(null, 204);
 });
 
@@ -105,6 +113,10 @@ app.post("/api/downloads/:id/consume", async (c) => {
 	if (result.kind === "not_found") return c.json(error("not_found"), 404);
 	if (result.kind === "gone") return c.json(error("gone"), 410);
 
+	if (result.item.remaining === 0) {
+		// 受信者が取得し終えるまで S3 のオブジェクトは残す
+		await scheduleCleanup(id, Date.now() + DELETE_DELAY_MS);
+	}
 	const downloadUrl = await presignGet(id);
 	return c.json<ConsumeResponse>({ downloadUrl });
 });

@@ -1,4 +1,5 @@
 import {
+	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
 	NotFound,
@@ -32,4 +33,9 @@ export async function objectSize(key: string): Promise<number | null> {
 		if (e instanceof NotFound) return null;
 		throw e;
 	}
+}
+
+// 対象が無くても成功する
+export async function deleteObject(key: string): Promise<void> {
+	await s3Client().send(new DeleteObjectCommand({ Bucket: config().bucketName, Key: key }));
 }
