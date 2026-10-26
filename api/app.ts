@@ -4,12 +4,14 @@ import {
 	MAX_EXPIRES_IN,
 	MAX_SIZE,
 	type ApiError,
+	type ConsumeResponse,
 	type CreateUploadRequest,
 	type CreateUploadResponse,
+	type DownloadInfo,
 } from "../shared/api";
 import { config, required } from "./config";
-import { markReady, putPending } from "./db";
-import { objectSize, presignPut } from "./storage";
+import { consume, getItem, markReady, putPending } from "./db";
+import { objectSize, presignGet, presignPut } from "./storage";
 import { verifyTurnstile } from "./turnstile";
 
 export const app = new Hono();
@@ -78,4 +80,31 @@ app.post("/api/uploads/:id/complete", async (c) => {
 	const item = await markReady(id, size);
 	if (!item) return c.json(error("size_mismatch"), 409);
 	return c.body(null, 204);
+});
+
+app.get("/api/downloads/:id", async (c) => {
+	const id = c.req.param("id");
+	if (!ID_PATTERN.test(id)) return c.json(error("not_found"), 404);
+
+	const item = await getItem(id);
+	if (!item || item.status !== "ready") return c.json(error("not_found"), 404);
+	if (item.remaining <= 0 || item.expiresAt <= Date.now()) return c.json(error("gone"), 410);
+	return c.json<DownloadInfo>({
+		meta: item.meta,
+		size: item.size,
+		remaining: item.remaining,
+		expiresAt: item.expiresAt,
+	});
+});
+
+app.post("/api/downloads/:id/consume", async (c) => {
+	const id = c.req.param("id");
+	if (!ID_PATTERN.test(id)) return c.json(error("not_found"), 404);
+
+	const result = await consume(id, Date.now());
+	if (result.kind === "not_found") return c.json(error("not_found"), 404);
+	if (result.kind === "gone") return c.json(error("gone"), 410);
+
+	const downloadUrl = await presignGet(id);
+	return c.json<ConsumeResponse>({ downloadUrl });
 });

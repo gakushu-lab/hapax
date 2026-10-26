@@ -19,6 +19,11 @@ export type Item = {
 
 export type NewItem = Pick<Item, "id" | "meta" | "size" | "maxDownloads" | "expiresAt">;
 
+export type ConsumeResult =
+	| { kind: "ok"; item: Item }
+	| { kind: "not_found" }
+	| { kind: "gone" };
+
 export async function putPending(input: NewItem): Promise<Item> {
 	const item: Item = {
 		...input,
@@ -59,5 +64,28 @@ export async function markReady(id: string, actualSize: number): Promise<Item | 
 	} catch (e) {
 		if (e instanceof ConditionalCheckFailedException) return null;
 		throw e;
+	}
+}
+
+// 残り回数を1減らす。条件付き更新なので、同時に呼ばれても回数を超えない
+export async function consume(id: string, now: number): Promise<ConsumeResult> {
+	try {
+		const res = await dynamoClient().send(
+			new UpdateCommand({
+				TableName: config().tableName,
+				Key: { id },
+				UpdateExpression: "SET remaining = remaining - :one",
+				ConditionExpression: "#status = :ready AND remaining > :zero AND expiresAt > :now",
+				ExpressionAttributeNames: { "#status": "status" },
+				ExpressionAttributeValues: { ":one": 1, ":zero": 0, ":ready": "ready", ":now": now },
+				ReturnValues: "ALL_NEW",
+			}),
+		);
+		return { kind: "ok", item: res.Attributes as Item };
+	} catch (e) {
+		if (!(e instanceof ConditionalCheckFailedException)) throw e;
+		const item = await getItem(id);
+		if (!item || item.status !== "ready") return { kind: "not_found" };
+		return { kind: "gone" };
 	}
 }

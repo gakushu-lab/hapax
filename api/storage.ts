@@ -1,4 +1,5 @@
 import {
+	GetObjectCommand,
 	HeadObjectCommand,
 	NotFound,
 	PutObjectCommand,
@@ -13,6 +14,12 @@ export const DOWNLOAD_URL_TTL = 60; // 60秒
 export function presignPut(key: string): Promise<string> {
 	return getSignedUrl(s3Client(), new PutObjectCommand({ Bucket: config().bucketName, Key: key }), {
 		expiresIn: UPLOAD_URL_TTL,
+	});
+}
+
+export function presignGet(key: string): Promise<string> {
+	return getSignedUrl(s3Client(), new GetObjectCommand({ Bucket: config().bucketName, Key: key }), {
+		expiresIn: DOWNLOAD_URL_TTL,
 	});
 }
 
