@@ -39,10 +39,12 @@ resource "random_password" "origin_secret" {
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   default_root_object = "index.html"
-  price_class         = "PriceClass_200"
-  web_acl_id          = aws_wafv2_web_acl.main.arn
-  aliases             = [var.domain]
-  http_version        = "http2and3"
+  # PriceClass_200 で IPv6 を無効にした状態では、Free プランへの登録が対象外のエラーになった
+  price_class     = "PriceClass_All"
+  is_ipv6_enabled = true
+  web_acl_id      = aws_wafv2_web_acl.main.arn
+  aliases         = [var.domain]
+  http_version    = "http2and3"
 
   origin {
     origin_id                = "web"
