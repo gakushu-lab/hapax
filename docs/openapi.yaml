@@ -1,0 +1,177 @@
+openapi: 3.1.0
+info:
+  title: hapax API
+  version: 1.0.0
+  description: |
+    ファイル本体とファイル情報はブラウザで暗号化してから送る。
+    サーバーは暗号文と回数・期限だけを扱う。
+servers:
+  - url: https://hapax.tom.gakushu.now
+# 認証は無い。URL の ID を知っていることが権限になる
+security: []
+paths:
+  /api/uploads:
+    post:
+      operationId: createUpload
+      summary: アップロードを始める
+      description: ID を発行し、S3 の署名付き PUT URL (有効期限15分) を返す。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUploadRequest"
+      responses:
+        "201":
+          description: 発行した
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateUploadResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          description: "Turnstile の検証に失敗した。AWS WAF が遮断したときも 403 だが、本文は JSON ではない"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "API 全体の呼び出しが毎秒100件を超えた (Lambda Web Function のエンドポイントが返す)"
+  /api/uploads/{id}/complete:
+    post:
+      operationId: completeUpload
+      summary: アップロードの完了を知らせる
+      description: S3 のオブジェクトのサイズが申告と一致すれば、受信側から見えるようにする。
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204":
+          description: 公開した
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: S3 にオブジェクトが無い、またはサイズが申告と違う
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/downloads/{id}:
+    get:
+      operationId: getDownload
+      summary: ファイルの情報を取得する
+      description: 回数は減らさない。
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadInfo"
+        "404":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Gone"
+  /api/downloads/{id}/consume:
+    post:
+      operationId: consumeDownload
+      summary: ダウンロードする
+      description: 残り回数を1減らし、S3 の署名付き GET URL (有効期限60秒) を返す。
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: 発行した
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumeResponse"
+        "404":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Gone"
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9_-]{22}$"
+  responses:
+    Error:
+      description: 入力が不正、または見つからない
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Gone:
+      description: 期限切れ、または回数に達した
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    CreateUploadRequest:
+      type: object
+      required: [meta, size, expiresIn, maxDownloads, turnstileToken]
+      properties:
+        meta:
+          type: string
+          maxLength: 4096
+          description: "暗号化したファイル情報 (base64url)"
+        size:
+          type: integer
+          minimum: 1
+          maximum: 104857600
+          description: 暗号文のバイト数
+        expiresIn:
+          type: integer
+          minimum: 1
+          maximum: 604800
+          description: 保存期間 (秒)
+        maxDownloads:
+          type: integer
+          minimum: 1
+          maximum: 10
+        turnstileToken:
+          type: string
+    CreateUploadResponse:
+      type: object
+      required: [id, uploadUrl]
+      properties:
+        id:
+          type: string
+        uploadUrl:
+          type: string
+          format: uri
+    DownloadInfo:
+      type: object
+      required: [meta, size, remaining, expiresAt]
+      properties:
+        meta:
+          type: string
+        size:
+          type: integer
+        remaining:
+          type: integer
+        expiresAt:
+          type: integer
+          description: "削除される時刻 (UNIX 時刻、ミリ秒)"
+    ConsumeResponse:
+      type: object
+      required: [downloadUrl]
+      properties:
+        downloadUrl:
+          type: string
+          format: uri
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          examples: [not_found]
