@@ -2,15 +2,12 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>hapax API</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.34.0/swagger-ui.css" />
   </head>
   <body>
-    <div id="swagger-ui"></div>
-    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.34.0/swagger-ui-bundle.js"></script>
-    <script>
-      // hapax の API は別のオリジンからの呼び出しと Turnstile のない送信を断るので、画面からの試し送信を無効にする
-      SwaggerUIBundle({ url: "openapi.yaml", dom_id: "#swagger-ui", supportedSubmitMethods: [] });
-    </script>
+    <!-- Redoc は既定で利用状況を送信するので止める -->
+    <redoc spec-url="openapi.yaml" disable-telemetry="true"></redoc>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/redoc@3.0.1/bundles/redoc.standalone.js"></script>
   </body>
 </html>
