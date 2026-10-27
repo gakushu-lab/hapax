@@ -1,0 +1,18 @@
+{
+  "name": "@hapax/e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@hapax/api": "workspace:*",
+    "@hapax/typescript-config": "workspace:*",
+    "@hapax/web": "workspace:*",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.3"
+  }
+}

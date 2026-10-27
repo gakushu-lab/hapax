@@ -1,0 +1,32 @@
+{
+  "name": "@hapax/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hapax/shared": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@digital-go-jp/design-tokens": "2.0.1",
+    "@digital-go-jp/tailwind-theme-plugin": "2.0.0",
+    "@hapax/typescript-config": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
