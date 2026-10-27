@@ -8,3 +8,26 @@ export type EventName =
 	| "deleted_expired" // 期限切れで削除 (1回以上ダウンロードされた)
 	| "deleted_unused" // 一度もダウンロードされずに期限切れで削除
 	| "deleted_abandoned"; // アップロードが完了しないまま削除
+
+export function emit(event: EventName, bytes: number): void {
+	process.stdout.write(
+		`${JSON.stringify({
+			_aws: {
+				Timestamp: Date.now(),
+				CloudWatchMetrics: [
+					{
+						Namespace: "hapax",
+						Dimensions: [["Event"]],
+						Metrics: [
+							{ Name: "Count", Unit: "Count" },
+							{ Name: "Bytes", Unit: "Bytes" },
+						],
+					},
+				],
+			},
+			Event: event,
+			Count: 1,
+			Bytes: bytes,
+		})}\n`,
+	);
+}
