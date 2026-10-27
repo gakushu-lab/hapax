@@ -27,3 +27,7 @@ dist-api
 # playwright
 playwright-report
 test-results
+# terraform
+infra/.terraform
+infra/*.zip
+infra/terraform.tfvars

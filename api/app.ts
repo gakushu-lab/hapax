@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { Hono } from "hono";
 import {
 	MAX_DOWNLOADS,
@@ -33,6 +34,22 @@ function newId(): string {
 function error(message: string): ApiError {
 	return { error: message };
 }
+
+// 比べる時間から値を推測されないように、長さが同じときは timingSafeEqual で比べる
+function sameSecret(actual: string | undefined, expected: string): boolean {
+	const a = Buffer.from(actual ?? "");
+	const b = Buffer.from(expected);
+	return a.length === b.length && timingSafeEqual(a, b);
+}
+
+// CloudFront はオリジンへの要求に秘密の値 (x-origin-verify) を付ける。値が無い要求は、
+// CloudFront と AWS WAF を通らずに Lambda Web Function のドメインへ直接来たものとして断る
+app.use("/api/*", async (c, next) => {
+	if (!config().devMode && !sameSecret(c.req.header("x-origin-verify"), required("ORIGIN_SECRET"))) {
+		return c.json(error("forbidden"), 403);
+	}
+	await next();
+});
 
 function isValidUpload(body: CreateUploadRequest): boolean {
 	return (
