@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- OS の設定に合わせて、スクロールバーやファイル選択などブラウザ標準の部品の色も変える -->
     <meta name="color-scheme" content="light dark" />
+    <!-- 画面が描かれる前に配色を決め、ちらつきを防ぐ。src/lib/theme.ts と同じ規則 -->
+    <script>
+      (() => {
+        let mode = "system";
+        try {
+          mode = localStorage.getItem("hapax-theme") ?? "system";
+        } catch {}
+        const dark = mode === "dark" || (mode !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
