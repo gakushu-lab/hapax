@@ -52,7 +52,7 @@ resource "aws_s3_bucket_cors_configuration" "files" {
   }
 }
 
-# 削除の予約 (SQS) が失敗し続けた場合の保険
+# 削除の予約が失敗し続けた場合の保険
 resource "aws_s3_bucket_lifecycle_configuration" "files" {
   bucket = aws_s3_bucket.files.id
 

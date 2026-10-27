@@ -22,7 +22,7 @@ API の仕様: https://gakushu-lab.github.io/hapax/
 | 画面 | React、デジタル庁デザインシステム |
 | API | Hono、Lambda Web Function |
 | データ | DynamoDB、S3 |
-| 削除 | SQS、Lambda |
+| 削除 | EventBridge Scheduler、Lambda |
 | 暗号 | Web Crypto API |
 | インフラ | Terraform、GitHub Actions |
 | テスト | Vitest、Playwright |

@@ -89,7 +89,7 @@ app.post("/api/uploads", async (c) => {
 		maxDownloads: body.maxDownloads,
 		expiresAt: Date.now() + body.expiresIn * 1000,
 	});
-	await scheduleCleanup(id, Date.now() + PENDING_TTL_MS);
+	await scheduleCleanup(id, Date.now() + PENDING_TTL_MS, "pending");
 	emit("upload_created", item.size);
 
 	const uploadUrl = await presignPut(id);
@@ -105,7 +105,7 @@ app.post("/api/uploads/:id/complete", async (c) => {
 
 	const item = await markReady(id, size);
 	if (!item) return c.json(error("size_mismatch"), 409);
-	await scheduleCleanup(id, item.expiresAt);
+	await scheduleCleanup(id, item.expiresAt, "expire");
 	emit("upload_completed", item.size);
 	return c.body(null, 204);
 });
@@ -135,7 +135,7 @@ app.post("/api/downloads/:id/consume", async (c) => {
 
 	if (result.item.remaining === 0) {
 		// 受信者が取得し終えるまで S3 のオブジェクトは残す
-		await scheduleCleanup(id, Date.now() + DELETE_DELAY_MS);
+		await scheduleCleanup(id, Date.now() + DELETE_DELAY_MS, "consumed");
 	}
 	emit("consumed", result.item.size);
 	const downloadUrl = await presignGet(id);
