@@ -56,7 +56,7 @@ resource "aws_cloudfront_distribution" "main" {
     origin_id   = "api"
     domain_name = var.api_domain
 
-    # API は CloudFront 経由のリクエストだけを受け付ける (api/app.ts で照合する)
+    # API は CloudFront 経由のリクエストだけを受け付ける (apps/api/src/app.ts で照合する)
     custom_header {
       name  = "x-origin-verify"
       value = random_password.origin_secret.result

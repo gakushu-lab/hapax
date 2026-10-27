@@ -4,45 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview",
-    "api": "tsx watch --env-file=api/local.env api/dev.ts",
-    "db-init": "tsx --env-file=api/local.env api/local/init.ts",
-    "test": "vitest run",
-    "build-api": "tsx scripts/build-api.ts",
-    "e2e": "playwright test"
-  },
-  "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1156.0",
-    "@aws-sdk/client-s3": "^3.1156.0",
-    "@aws-sdk/client-scheduler": "^3.1156.0",
-    "@aws-sdk/lib-dynamodb": "^3.1156.0",
-    "@aws-sdk/s3-request-presigner": "^3.1156.0",
-    "@hono/node-server": "^2.1.5",
-    "@phosphor-icons/react": "^2.1.10",
-    "hono": "^4.13.14",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "dev": "pnpm --filter @hapax/web dev",
+    "api": "pnpm --filter @hapax/api dev",
+    "db-init": "pnpm --filter @hapax/api db-init",
+    "build": "pnpm --filter @hapax/web build",
+    "build-api": "pnpm --filter @hapax/api build",
+    "test": "pnpm -r run test",
+    "e2e": "pnpm --filter @hapax/e2e e2e",
+    "check-types": "pnpm -r run check-types",
+    "lint": "oxlint"
   },
   "devDependencies": {
-    "@digital-go-jp/design-tokens": "2.0.1",
-    "@digital-go-jp/tailwind-theme-plugin": "2.0.0",
-    "@playwright/test": "^1.64.1",
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/aws-lambda": "^8.10.164",
-    "@types/node": "^24.19.2",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "esbuild": "^0.28.2",
-    "oxlint": "^1.88.0",
-    "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.15",
-    "typescript": "~6.0.3",
-    "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "oxlint": "^1.88.0"
   },
   "packageManager": "pnpm@12.6.0"
 }

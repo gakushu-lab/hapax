@@ -1,0 +1,4 @@
+{
+  "extends": "@hapax/typescript-config/vite.json",
+  "include": ["src", "vite.config.ts"]
+}

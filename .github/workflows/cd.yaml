@@ -47,8 +47,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build-api
-      - run: python3 -m zipfile -c ../lambda.zip *
-        working-directory: dist-api
+      - run: python3 -m zipfile -c ../../../lambda.zip *
+        working-directory: apps/api/dist
       - name: AWS CLI を最新にする
         run: |
           curl -sS https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip
@@ -66,7 +66,7 @@ jobs:
           turnstile_secret=$(param turnstile-secret)
           echo "::add-mask::$origin_secret"
           echo "::add-mask::$turnstile_secret"
-          aws lambda-web deploy --name hapax-api --code dist-api --entry-point lambda.mjs --endpoint-name prod \
+          aws lambda-web deploy --name hapax-api --code apps/api/dist --entry-point lambda.mjs --endpoint-name prod \
             --env TABLE_NAME="$(param table-name)" \
             --env BUCKET_NAME="$(param files-bucket)" \
             --env CLEANUP_SCHEDULE_GROUP="$(param cleanup-schedule-group)" \
@@ -103,5 +103,5 @@ jobs:
         run: |
           bucket=$(aws ssm get-parameter --name /hapax/web-bucket --query Parameter.Value --output text)
           distribution=$(aws ssm get-parameter --name /hapax/cloudfront-distribution-id --query Parameter.Value --output text)
-          aws s3 sync dist/ "s3://$bucket" --delete
+          aws s3 sync apps/web/dist/ "s3://$bucket" --delete
           aws cloudfront create-invalidation --distribution-id "$distribution" --paths "/*" > /dev/null
