@@ -40,6 +40,14 @@ resource "aws_lambda_function" "cleanup" {
   depends_on = [aws_cloudwatch_log_group.cleanup]
 }
 
+# 期限が15分より先の予約は、削除用 Lambda が同じキューに送り直してつなぐ。
+# Lambda はこれを再帰ループと見なして約16回で止めるので、この関数だけ許可する。
+# 送り直しは予約の時刻で必ず終わり、最長の7日でも672回
+resource "aws_lambda_function_recursion_config" "cleanup" {
+  function_name  = aws_lambda_function.cleanup.function_name
+  recursive_loop = "Allow"
+}
+
 resource "aws_cloudwatch_log_group" "cleanup" {
   name              = "/aws/lambda/${var.project}-cleanup"
   retention_in_days = 14
