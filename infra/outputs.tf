@@ -9,7 +9,3 @@ output "web_bucket" {
 output "distribution_id" {
   value = aws_cloudfront_distribution.main.id
 }
-
-output "cleanup_queue_url" {
-  value = aws_sqs_queue.cleanup.url
-}

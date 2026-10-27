@@ -75,7 +75,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/Lambda", "Invocations", "FunctionName", aws_lambda_function.cleanup.function_name, { stat = "Sum" }],
             ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.cleanup.function_name, { stat = "Sum" }],
-            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.cleanup_failed.name, { stat = "Maximum", label = "失敗して残ったメッセージ", yAxis = "right" }],
+            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.cleanup_failed.name, { stat = "Maximum", label = "失敗して残った予約", yAxis = "right" }],
           ]
         }
       },

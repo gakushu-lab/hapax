@@ -1,8 +1,7 @@
-import type { SQSEvent } from "aws-lambda";
 import { describe, expect, it } from "vitest";
-import { cleanup, processMessages } from "../api/cleanup";
+import { cleanup, handler } from "../api/cleanup";
 import { getItem } from "../api/db";
-import { delaySeconds } from "../api/schedule";
+import { atExpression } from "../api/schedule";
 import { objectSize } from "../api/storage";
 import { api, createUpload, putObject, uploadReady } from "./helpers";
 
@@ -48,31 +47,17 @@ describe("削除", () => {
 	});
 });
 
-// SQS から届くイベントのうち、削除用 Lambda が読む部分だけを作る
-function sqsEvent(id: string, at: number): SQSEvent {
-	return { Records: [{ body: JSON.stringify({ id, at }) }] } as SQSEvent;
-}
-
 describe("予約", () => {
-	it("待ち時間は秒に切り上げ、SQS の上限の15分で頭打ちにする", () => {
-		const now = 1_000_000;
-		expect(delaySeconds(now - 5000, now)).toBe(0);
-		expect(delaySeconds(now + 1500, now)).toBe(2);
-		expect(delaySeconds(now + 10 * 60 * 1000, now)).toBe(600);
-		expect(delaySeconds(now + 2 * 60 * 60 * 1000, now)).toBe(900);
+	it("時刻を分単位に切り上げた UTC の at 式にする", () => {
+		expect(atExpression(Date.UTC(2026, 9, 28, 1, 2, 0, 0))).toBe("at(2026-10-28T01:02:00)");
+		expect(atExpression(Date.UTC(2026, 9, 28, 1, 2, 0, 1))).toBe("at(2026-10-28T01:03:00)");
+		expect(atExpression(Date.UTC(2026, 9, 28, 23, 59, 30))).toBe("at(2026-10-29T00:00:00)");
 	});
 
-	it("時刻がまだ先の予約では消さない", async () => {
+	it("EventBridge Scheduler から ID を受け取って消す", async () => {
 		const id = await uploadReady(1);
 		await api(`/api/downloads/${id}/consume`, { method: "POST" });
-		await processMessages(sqsEvent(id, Date.now() + 60_000));
-		expect(await objectSize(id)).not.toBeNull();
-	});
-
-	it("時刻を過ぎた予約で消える", async () => {
-		const id = await uploadReady(1);
-		await api(`/api/downloads/${id}/consume`, { method: "POST" });
-		await processMessages(sqsEvent(id, Date.now() - 1000));
+		expect(await handler({ id })).toBe("deleted");
 		await expectDeleted(id);
 	});
 });

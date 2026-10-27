@@ -69,7 +69,10 @@ jobs:
           aws lambda-web deploy --name hapax-api --code dist-api --entry-point lambda.mjs --endpoint-name prod \
             --env TABLE_NAME="$(param table-name)" \
             --env BUCKET_NAME="$(param files-bucket)" \
-            --env CLEANUP_QUEUE_URL="$(param cleanup-queue-url)" \
+            --env CLEANUP_SCHEDULE_GROUP="$(param cleanup-schedule-group)" \
+            --env CLEANUP_FUNCTION_ARN="$(param cleanup-function-arn)" \
+            --env CLEANUP_SCHEDULER_ROLE_ARN="$(param cleanup-scheduler-role-arn)" \
+            --env CLEANUP_FAILED_QUEUE_ARN="$(param cleanup-failed-queue-arn)" \
             --env ORIGIN_SECRET="$origin_secret" \
             --env TURNSTILE_SECRET="$turnstile_secret" \
             --env NODE_OPTIONS=--enable-source-maps

@@ -25,10 +25,9 @@ resource "aws_lambda_function" "cleanup" {
 
   environment {
     variables = {
-      TABLE_NAME        = aws_dynamodb_table.main.name
-      BUCKET_NAME       = aws_s3_bucket.files.id
-      CLEANUP_QUEUE_URL = aws_sqs_queue.cleanup.url
-      NODE_OPTIONS      = "--enable-source-maps"
+      TABLE_NAME   = aws_dynamodb_table.main.name
+      BUCKET_NAME  = aws_s3_bucket.files.id
+      NODE_OPTIONS = "--enable-source-maps"
     }
   }
 
@@ -45,9 +44,14 @@ resource "aws_cloudwatch_log_group" "cleanup" {
   retention_in_days = 14
 }
 
-# SQS のメッセージを1件ずつ削除用 Lambda に渡す。失敗したときに送り直す範囲を1件にするため
-resource "aws_lambda_event_source_mapping" "cleanup" {
-  event_source_arn = aws_sqs_queue.cleanup.arn
-  function_name    = aws_lambda_function.cleanup.arn
-  batch_size       = 1
+# EventBridge Scheduler は削除用 Lambda を非同期で呼ぶ。Lambda が再試行しても失敗したら、失敗用のキューに送る
+resource "aws_lambda_function_event_invoke_config" "cleanup" {
+  function_name          = aws_lambda_function.cleanup.function_name
+  maximum_retry_attempts = 2
+
+  destination_config {
+    on_failure {
+      destination = aws_sqs_queue.cleanup_failed.arn
+    }
+  }
 }

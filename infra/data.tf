@@ -8,3 +8,8 @@ data "aws_caller_identity" "current" {}
 data "aws_iam_role" "lambda_exec" {
   name = "LabLambdaExec"
 }
+
+# gakushu-lab が用意した EventBridge Scheduler の実行ロール
+data "aws_iam_role" "scheduler_exec" {
+  name = "LabSchedulerExec"
+}
