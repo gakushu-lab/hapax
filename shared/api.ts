@@ -2,7 +2,7 @@
 
 export const MAX_DOWNLOADS = 10;
 export const MAX_EXPIRES_IN = 7 * 24 * 60 * 60; // 7日 (秒)
-export const MAX_SIZE = 100 * 1024 * 1024; // 100MiB (研修環境の料金の上限に合わせる)
+export const MAX_SIZE = 100 * 1024 * 1024; // 100MiB (gakushu-lab の料金の上限に合わせる)
 
 export type CreateUploadRequest = {
 	meta: string; // 暗号化したファイル情報 (base64url)

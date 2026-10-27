@@ -28,12 +28,12 @@ API の仕様 (Redoc): https://gakushu-lab.github.io/hapax/
 
 | 手段 | 役割 |
 |---|---|
-| Amazon Simple Queue Service (SQS) の遅延配信 | 期限・回数切れ・放置されたアップロードを予定の時刻に削除する。遅延は最大15分なので、それより先の予約は削除用 Lambda が送り直してつなぐ |
-| S3 のライフサイクル規則 (8日)、DynamoDB の有効期限 (Time To Live, TTL) | 予約が失敗し続けた場合の保険 |
+| Amazon Simple Queue Service (SQS) の遅延配信 | 期限・回数切れ・放置されたアップロードを予定の時刻に削除する。遅延は最大15分なので、それより先の予約は削除用 Lambda が15分ごとに送り直す |
+| S3 のライフサイクル規則 (8日)、DynamoDB の有効期限 (Time To Live, TTL) | 予約による削除が失敗し続けたファイルと行を消す |
 
-## 研修環境の制約
+## gakushu-lab の制約
 
-研修環境 gakushu-lab の tominaga アカウント (大阪リージョン) に置く。
+gakushu-lab の tominaga アカウント (大阪リージョン) に置く。
 
 | 制約 | hapax での扱い |
 |---|---|

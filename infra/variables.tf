@@ -13,7 +13,7 @@ variable "domain" {
   default = "hapax.tom.gakushu.now"
 }
 
-# 研修環境で社員ごとに用意されたホストゾーン
+# gakushu-lab で社員ごとに用意されたホストゾーン
 variable "zone" {
   type    = string
   default = "tom.gakushu.now"
