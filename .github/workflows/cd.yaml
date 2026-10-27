@@ -1,0 +1,104 @@
+name: cd
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-3
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
+jobs:
+  deploy-infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::090213310133:role/LabGitHubDeploy
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v4
+      - name: terraform apply
+        working-directory: infra
+        env:
+          TF_VAR_turnstile_secret: ${{ secrets.TURNSTILE_SECRET }}
+          TF_VAR_api_domain: ${{ vars.API_DOMAIN }}
+        run: |
+          terraform init -input=false
+          terraform apply -input=false -auto-approve
+
+  deploy-api:
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build-api
+      - run: python3 -m zipfile -c ../lambda.zip *
+        working-directory: dist-api
+      - name: AWS CLI を最新にする
+        run: |
+          curl -sS https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          aws --version
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::090213310133:role/LabGitHubDeploy
+          aws-region: ${{ env.AWS_REGION }}
+      - name: API を配信する
+        run: |
+          param() { aws ssm get-parameter --name "/hapax/$1" --with-decryption --query Parameter.Value --output text; }
+          origin_secret=$(param origin-secret)
+          turnstile_secret=$(param turnstile-secret)
+          echo "::add-mask::$origin_secret"
+          echo "::add-mask::$turnstile_secret"
+          aws lambda-web deploy --name hapax-api --code dist-api --entry-point lambda.mjs --endpoint-name prod \
+            --env TABLE_NAME="$(param table-name)" \
+            --env BUCKET_NAME="$(param files-bucket)" \
+            --env CLEANUP_QUEUE_URL="$(param cleanup-queue-url)" \
+            --env ORIGIN_SECRET="$origin_secret" \
+            --env TURNSTILE_SECRET="$turnstile_secret" \
+            --env NODE_OPTIONS=--enable-source-maps
+      - name: 削除用 Lambda のコードを更新する
+        run: |
+          aws lambda update-function-code --function-name hapax-cleanup --zip-file fileb://lambda.zip > /dev/null
+          aws lambda wait function-updated --function-name hapax-cleanup
+
+  deploy-web:
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::090213310133:role/LabGitHubDeploy
+          aws-region: ${{ env.AWS_REGION }}
+      - name: S3 に置いて CloudFront のキャッシュを消す
+        run: |
+          bucket=$(aws ssm get-parameter --name /hapax/web-bucket --query Parameter.Value --output text)
+          distribution=$(aws ssm get-parameter --name /hapax/cloudfront-distribution-id --query Parameter.Value --output text)
+          aws s3 sync dist/ "s3://$bucket" --delete
+          aws cloudfront create-invalidation --distribution-id "$distribution" --paths "/*" > /dev/null
