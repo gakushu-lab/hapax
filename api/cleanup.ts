@@ -1,6 +1,6 @@
 import type { SQSEvent } from "aws-lambda";
 import { deleteItem, getItem } from "./db";
-import type { EventName } from "./metrics";
+import { emit, type EventName } from "./metrics";
 import { scheduleCleanup, type CleanupMessage } from "./schedule";
 import { deleteObject } from "./storage";
 
@@ -25,6 +25,7 @@ export async function cleanup(id: string, now = Date.now()): Promise<CleanupResu
 
 	await deleteObject(id);
 	await deleteItem(id);
+	emit(event, item.size);
 	return "deleted";
 }
 
